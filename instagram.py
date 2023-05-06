@@ -3,6 +3,7 @@ from mitmproxy import command
 import re
 import json
 import csv
+from datetime import datetime
 
 class InstagramAddon:
   
@@ -18,6 +19,7 @@ class InstagramAddon:
       json_data = json.loads(response_content)
       user_data = json_data["data"]["user"]
       self.accounts[account_name] = {
+        "account_name": account_name,
         "follower_count": user_data["edge_followed_by"]["count"],
         "following_count": user_data["edge_follow"]["count"],
         "id": user_data["id"]
@@ -44,10 +46,19 @@ class InstagramAddon:
           "id": item["id"],
           "like_count": item["like_count"],
           "comment_count": item["comment_count"],
-          "caption": item["caption"]["text"].replace(",", ""),
-          "accessibility_caption": item["accessibility_caption"].replace(",", "") if "accessibility_caption" in item else "-",
+          # "caption": item["caption"]["text"].replace(",", ""),
+          # "accessibility_caption": item["accessibility_caption"].replace(",", "") if "accessibility_caption" in item else "-",
           "taken_at": item["taken_at"],
         }
+        try:
+          post_date = datetime.fromtimestamp(int(item["taken_at"]))
+          data["year_taken"] = post_date.year
+          data["month_taken"] = post_date.month
+          data["day_taken"] = post_date.day
+          data["week_number"] = post_date.isocalendar()[1]
+        except:
+          pass
+
         self.media[userId].append(data)
   
   @command.command("instadump")
@@ -63,6 +74,12 @@ class InstagramAddon:
         dict_writer = csv.DictWriter(output_file, keys)
         dict_writer.writeheader()
         dict_writer.writerows(posts)
+    keys = list(self.accounts.values())[0]
+    accounts = self.accounts.values()
+    with open("accounts.csv", 'w', newline='') as output_file:
+      dict_writer = csv.DictWriter(output_file, keys)
+      dict_writer.writeheader()
+      dict_writer.writerows(accounts)
 
 addons = [
   InstagramAddon()
